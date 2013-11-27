@@ -1,1 +1,2 @@
-This file was created by IntelliJ IDEA 12.1.6 for binding GitHub repository
+CoreNLP is the class that runs the Stanford Coreference checker.
+NeuralNet is the class that has all of Camrons methods and stuff in it, and the main method that does everything.
