@@ -41,7 +41,33 @@ public class NeuralNet {
 
         writer.close();
     }
+    
+    //returns a boolean array of the guesses gotten
+    static boolean[] getGMethodResults(ArrayList<String> training) {
+        boolean[] gMethodResults = new boolean[training.size()/5];
 
+        for (int i=0; i<training.size(); i+=10) {
+            String sent1 = training.get(i);
+            String sent2 = training.get(i+5);
+            String pNoun1 = training.get(i+2).toLowerCase();
+            String pNoun2 = training.get(i+3).toLowerCase();
+            String correct1 = training.get(i+4).toLowerCase();
+            String correct2 = training.get(i+9).toLowerCase();
+            if (gMethod(sent1, sent2, pNoun1, pNoun2)) {
+                gMethodResults[i/5] = true;
+                gMethodResults[(i/5)+1] = false;
+            }
+            else {
+                gMethodResults[i/5] = false;
+                gMethodResults[(i/5)+1] = true;
+            }
+        }
+
+        return gMethodResults;
+    }
+    
+    //divide the training set into training and testing 
+    //***Divide the length of readFile by 10 to get this length***
     static boolean[] trainAndTest(int length, double percentage) {
         boolean trainTest[] = new boolean[length];
         for (int i = 0; i < length; i++) {
@@ -63,6 +89,7 @@ public class NeuralNet {
         return set;
     }
 
+    //reads training data and finds most probably outcome for sentence pairs with proper names and those without
     static boolean[] getBaseValues(ArrayList<String> training) {
         int nameCount = 0;
         int nameTotal = 0;
@@ -89,7 +116,7 @@ public class NeuralNet {
         return baseValues;
     }
 
-
+    //runs tests and returns the phrase to be searched
     static String getPhrase(List<TypedDependency> tdl) {
         String temp = markTest(tdl);
         if (!temp.equals("nope")) {
@@ -169,7 +196,6 @@ public class NeuralNet {
                 if (resultp1PN2 > percentage * resultp1PN1) {
                     return false;
                 }
-                //math for 1
             } else {
                 try {
                     resultp1PN1 += getResultsCountBing(p1PN1);
@@ -193,10 +219,11 @@ public class NeuralNet {
         }
 
         System.out.println("not enough to guess");
-        return false; //most likely
+        return false; //most likely of the rest (found from getBaseValues on training data)
 
     }
 
+    //Uses the parser to return the Typed Dependency List
     public static List<TypedDependency> getTDL(String sentence) {
         LexicalizedParser lp = LexicalizedParser.loadModel("edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz");
         TokenizerFactory<CoreLabel> tokenizerFactory = PTBTokenizer.factory(new CoreLabelTokenFactory(), "");
@@ -211,9 +238,10 @@ public class NeuralNet {
         return tdl;
     }
 
+    //returns the phrase for the cases with a mark
     static String markTest(List<TypedDependency> tdl) {
         String found;
-        int index = 0;
+        int index=0;
         int mark = -1;
         int det = -1;
         int cop = -1;
@@ -226,81 +254,91 @@ public class NeuralNet {
         int prep_on = -1;
         int prep_before = -1;
         int prep_after = -1;
-
-        for (TypedDependency t : tdl) {
+        
+        for(TypedDependency t : tdl) {
             String tD = t.toString();
             StringTokenizer token = new StringTokenizer(tD, "(");
             String id = token.nextToken();
             if (id.equals("mark")) {
-                mark = index;
+                mark=index;
             }
             if (mark != -1) {
                 if (id.equals("det")) {
                     if (det != -1) {
-                        if (index > mark && (index - mark) < (det - mark)) {
-                            det = index;
+                        if (index > mark && (index-mark) < (det-mark)) {
+                            det=index;
                         }
                         //****GET LOCATION OF PRONOUN AND USE THAT
-                    } else {
-                        det = index;
+                    }
+                    else {
+                        det=index;
                     }
                 } else if (id.equals("cop")) {
-                    cop = index;
+                    cop=index;
                 } else if (id.equals("dep")) {
-                    dep = index;
+                    dep=index;
                 } else if (id.equals("aux")) {
-                    aux = index;
+                    aux=index;
                 } else if (id.equals("auxpass")) {
-                    auxpass = index;
+                    auxpass=index;
                 } else if (id.equals("prep_in")) {
-                    prep_in = index;
+                    prep_in=index;
                 } else if (id.equals("dobj")) {
-                    dobj = index;
+                    dobj=index;
                 } else if (id.equals("nsubj")) {
-                    nsubj = index;
+                    nsubj=index;
                 } else if (id.equals("prep_on")) {
-                    prep_on = index;
+                    prep_on=index;
                 } else if (id.equals("prep_before")) {
-                    prep_before = index;
+                    prep_before=index;
                 } else if (id.equals("prep_after")) {
-                    prep_after = index;
+                    prep_after=index;
                 }
             }
-            index++;
+            index++;;
         }
         if (mark == -1) {
             found = "nope";
         } else if (det == -1 && cop != -1) {
             found = mark1(tdl, cop);
             found += prepAdd(tdl, cop, prep_on, prep_before, prep_after);
-        } else if (det != -1 && cop != -1) {
-            found = mark2(tdl, cop, det);
-            found += prepAdd(tdl, Math.max(cop, det), prep_on, prep_before, prep_after);
-        } else if (dep == -1 && aux != -1) {
-            found = mark3(tdl, aux);
-            found += prepAdd(tdl, aux, prep_on, prep_before, prep_after);
         }
+        
+        //MIDDLE OF FORMATTING
+        
+      else if (det != -1 && cop != -1) {
+          found = mark2(tdl, cop, det);
+          found += prepAdd(tdl, Math.max(cop, det), prep_on, prep_before, prep_after);
+      }
+      else if (dep == -1 && aux != -1) {
+          found = mark1(tdl, aux);
+          found += prepAdd(tdl, aux, prep_on, prep_before, prep_after);
+      }
   /*    else if (dep != -1 && aux == -1) {
           //System.out.println(4);
-          found = mark4(tdl, dep);
+          found = mark1(tdl, dep);
       }*/
-        else if (dep != -1 && aux != -1 && auxpass != -1) {
-            found = mark5(tdl, dep, aux, auxpass);
-            found += prepAdd(tdl, Math.max(Math.max(dep, aux), auxpass), prep_on, prep_before, prep_after);
-        } else if (prep_in != -1) {
-            found = mark6(tdl, prep_in);
-        } else if (dobj != -1) {
-            found = mark7(tdl, dobj);
-            found += prepAdd(tdl, dobj, prep_on, prep_before, prep_after);
-        } else if (dobj == -1 && nsubj != -1) {
-            found = mark8(tdl, nsubj);
-            found += prepAdd(tdl, nsubj, prep_on, prep_before, prep_after);
-        } else {
-            found = "huh: mark";
-        }
-
-        return found;
-    }
+      else if (dep != -1 && aux != -1 && auxpass != -1) {
+          found = mark5(tdl, dep, aux, auxpass);
+          found += prepAdd(tdl, Math.max(Math.max(dep, aux), auxpass), prep_on, prep_before, prep_after);
+      }
+      else if (prep_in != -1 ) {
+          found = mark6(tdl, prep_in);
+      }
+      else if (dobj != -1) {
+          found = mark7(tdl, dobj);
+          found += prepAdd(tdl, dobj, prep_on, prep_before, prep_after);
+      }
+      else if (dobj == -1 && nsubj != -1) {
+          found = mark1(tdl, nsubj);
+          found += prepAdd(tdl, nsubj, prep_on, prep_before, prep_after);
+      }
+      else {
+          found = "huh: mark";
+      }
+      
+      return found;
+  }
 
     static String mark1(List<TypedDependency> tdl, int cop) {
         String temp = tdl.get(cop).toString();
