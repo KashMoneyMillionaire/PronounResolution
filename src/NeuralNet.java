@@ -41,7 +41,33 @@ public class NeuralNet {
 
         writer.close();
     }
+    
+    //returns a boolean array of the guesses gotten
+    static boolean[] getGMethodResults(ArrayList<String> training) {
+        boolean[] gMethodResults = new boolean[training.size()/5];
 
+        for (int i=0; i<training.size(); i+=10) {
+            String sent1 = training.get(i);
+            String sent2 = training.get(i+5);
+            String pNoun1 = training.get(i+2).toLowerCase();
+            String pNoun2 = training.get(i+3).toLowerCase();
+            String correct1 = training.get(i+4).toLowerCase();
+            String correct2 = training.get(i+9).toLowerCase();
+            if (gMethod(sent1, sent2, pNoun1, pNoun2)) {
+                gMethodResults[i/5] = true;
+                gMethodResults[(i/5)+1] = false;
+            }
+            else {
+                gMethodResults[i/5] = false;
+                gMethodResults[(i/5)+1] = true;
+            }
+        }
+
+        return gMethodResults;
+    }
+    
+    //divide the training set into training and testing 
+    //***Divide the length of readFile by 10 to get this length***
     static boolean[] trainAndTest(int length, double percentage) {
         boolean trainTest[] = new boolean[length];
         for (int i = 0; i < length; i++) {
@@ -63,6 +89,7 @@ public class NeuralNet {
         return set;
     }
 
+    //reads training data and finds most probably outcome for sentence pairs with proper names and those without
     static boolean[] getBaseValues(ArrayList<String> training) {
         int nameCount = 0;
         int nameTotal = 0;
@@ -89,7 +116,7 @@ public class NeuralNet {
         return baseValues;
     }
 
-
+    //runs tests and returns the phrase to be searched
     static String getPhrase(List<TypedDependency> tdl) {
         String temp = markTest(tdl);
         if (!temp.equals("nope")) {
@@ -169,7 +196,6 @@ public class NeuralNet {
                 if (resultp1PN2 > percentage * resultp1PN1) {
                     return false;
                 }
-                //math for 1
             } else {
                 try {
                     resultp1PN1 += getResultsCountBing(p1PN1);
@@ -193,10 +219,11 @@ public class NeuralNet {
         }
 
         System.out.println("not enough to guess");
-        return false; //most likely
+        return false; //most likely of the rest (found from getBaseValues on training data)
 
     }
 
+    //Uses the parser to return the Typed Dependency List
     public static List<TypedDependency> getTDL(String sentence) {
         LexicalizedParser lp = LexicalizedParser.loadModel("edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz");
         TokenizerFactory<CoreLabel> tokenizerFactory = PTBTokenizer.factory(new CoreLabelTokenFactory(), "");
@@ -211,9 +238,10 @@ public class NeuralNet {
         return tdl;
     }
 
+    //returns the phrase for the cases with a mark
     static String markTest(List<TypedDependency> tdl) {
         String found;
-        int index = 0;
+        int index=0;
         int mark = -1;
         int det = -1;
         int cop = -1;
@@ -226,47 +254,48 @@ public class NeuralNet {
         int prep_on = -1;
         int prep_before = -1;
         int prep_after = -1;
-
-        for (TypedDependency t : tdl) {
+        
+        for(TypedDependency t : tdl) {
             String tD = t.toString();
             StringTokenizer token = new StringTokenizer(tD, "(");
             String id = token.nextToken();
             if (id.equals("mark")) {
-                mark = index;
+                mark=index;
             }
             if (mark != -1) {
                 if (id.equals("det")) {
                     if (det != -1) {
-                        if (index > mark && (index - mark) < (det - mark)) {
-                            det = index;
+                        if (index > mark && (index-mark) < (det-mark)) {
+                            det=index;
                         }
                         //****GET LOCATION OF PRONOUN AND USE THAT
-                    } else {
-                        det = index;
+                    }
+                    else {
+                        det=index;
                     }
                 } else if (id.equals("cop")) {
-                    cop = index;
+                    cop=index;
                 } else if (id.equals("dep")) {
-                    dep = index;
+                    dep=index;
                 } else if (id.equals("aux")) {
-                    aux = index;
+                    aux=index;
                 } else if (id.equals("auxpass")) {
-                    auxpass = index;
+                    auxpass=index;
                 } else if (id.equals("prep_in")) {
-                    prep_in = index;
+                    prep_in=index;
                 } else if (id.equals("dobj")) {
-                    dobj = index;
+                    dobj=index;
                 } else if (id.equals("nsubj")) {
-                    nsubj = index;
+                    nsubj=index;
                 } else if (id.equals("prep_on")) {
-                    prep_on = index;
+                    prep_on=index;
                 } else if (id.equals("prep_before")) {
-                    prep_before = index;
+                    prep_before=index;
                 } else if (id.equals("prep_after")) {
-                    prep_after = index;
+                    prep_after=index;
                 }
             }
-            index++;
+            index++;;
         }
         if (mark == -1) {
             found = "nope";
@@ -277,31 +306,27 @@ public class NeuralNet {
             found = mark2(tdl, cop, det);
             found += prepAdd(tdl, Math.max(cop, det), prep_on, prep_before, prep_after);
         } else if (dep == -1 && aux != -1) {
-            found = mark3(tdl, aux);
+            found = mark1(tdl, aux);
             found += prepAdd(tdl, aux, prep_on, prep_before, prep_after);
-        }
-  /*    else if (dep != -1 && aux == -1) {
-          //System.out.println(4);
-          found = mark4(tdl, dep);
-      }*/
-        else if (dep != -1 && aux != -1 && auxpass != -1) {
+        } else if (dep != -1 && aux != -1 && auxpass != -1) {
             found = mark5(tdl, dep, aux, auxpass);
             found += prepAdd(tdl, Math.max(Math.max(dep, aux), auxpass), prep_on, prep_before, prep_after);
-        } else if (prep_in != -1) {
+        } else if (prep_in != -1 ) {
             found = mark6(tdl, prep_in);
         } else if (dobj != -1) {
             found = mark7(tdl, dobj);
             found += prepAdd(tdl, dobj, prep_on, prep_before, prep_after);
         } else if (dobj == -1 && nsubj != -1) {
-            found = mark8(tdl, nsubj);
+            found = mark1(tdl, nsubj);
             found += prepAdd(tdl, nsubj, prep_on, prep_before, prep_after);
         } else {
             found = "huh: mark";
         }
-
+        
         return found;
     }
 
+    //helper methods for cases with a mark
     static String mark1(List<TypedDependency> tdl, int cop) {
         String temp = tdl.get(cop).toString();
 
@@ -314,18 +339,6 @@ public class NeuralNet {
 
         return getSecond(tempCop) + " " + getSecond(tempDet) + " " + getFirst(tempDet);
 
-    }
-
-    static String mark3(List<TypedDependency> tdl, int aux) {
-        String temp = tdl.get(aux).toString();
-
-        return getSecond(temp) + " " + getFirst(temp);
-    }
-
-    static String mark4(List<TypedDependency> tdl, int dep) {
-        String temp = tdl.get(dep).toString();
-
-        return getSecond(temp) + " " + getFirst(temp);
     }
 
     static String mark5(List<TypedDependency> tdl, int dep, int aux, int auxpass) {
@@ -348,12 +361,7 @@ public class NeuralNet {
         return getFirst(temp) + " " + getSecond(temp);
     }
 
-    static String mark8(List<TypedDependency> tdl, int nsubj) {
-        String temp = tdl.get(nsubj).toString();
-
-        return getSecond(temp) + " " + getFirst(temp);
-    }
-
+    //returns the phrase for the cases with a but conjunction
     static String conj_butTest(List<TypedDependency> tdl) {
         String found;
         int index = 0;
@@ -389,7 +397,7 @@ public class NeuralNet {
             found = mark1(tdl, cop);
             found += prepAdd(tdl, cop, prep_on, prep_before, prep_after);
         } else if (auxpass != -1) {
-            found = conj_but2(tdl, auxpass);
+            found = mark1(tdl, auxpass);
             found += prepAdd(tdl, auxpass, prep_on, prep_before, prep_after);
         } else {
             found = "huh: conj_but";
@@ -398,12 +406,7 @@ public class NeuralNet {
         return found;
     }
 
-    static String conj_but2(List<TypedDependency> tdl, int auxpass) {
-        String temp = tdl.get(auxpass).toString();
-
-        return getSecond(temp) + " " + getFirst(temp);
-    }
-
+    //returns the phrase for the remaining cases
     static String restTest(List<TypedDependency> tdl) {
         String found;
         int index = 0;
@@ -429,8 +432,7 @@ public class NeuralNet {
             String id = token.nextToken();
             if (id.equals("det")) {
                 det = index;
-            }
-            if (id.equals("cop")) {
+            } else if (id.equals("cop")) {
                 cop = index;
             } else if (id.equals("parataxis")) {
                 parataxis = index;
@@ -473,24 +475,24 @@ public class NeuralNet {
                 found += prepAdd(tdl, Math.max(cop, det), prep_on, prep_before, prep_after);
             }
         } else if (dep == -1 && aux != -1) {
-            found = mark3(tdl, aux);
+            found = mark1(tdl, aux);
             found += prepAdd(tdl, aux, prep_on, prep_before, prep_after);
         } else if (aux == -1 && auxpass != -1) {
-            found = conj_but2(tdl, auxpass);
+            found = mark1(tdl, auxpass);
             found += prepAdd(tdl, auxpass, prep_on, prep_before, prep_after);
         } else if (ccomp != -1) {
             if (dep != -1) {
-                found = mark4(tdl, dep);
+                found = mark1(tdl, dep);
                 found += prepAdd(tdl, dep, prep_on, prep_before, prep_after);
             } else {
-                found = rest2(tdl, ccomp);
+                found = mark7(tdl, ccomp);
                 found += prepAdd(tdl, ccomp, prep_on, prep_before, prep_after);
             }
         } else if (acomp != -1) {
-            found = rest3(tdl, acomp);
+            found = mark7(tdl, acomp);
             found += prepAdd(tdl, acomp, prep_on, prep_before, prep_after);
         } else if (partmod != -1) {
-            found = rest4(tdl, partmod);
+            found = mark7(tdl, partmod);
             found += prepAdd(tdl, partmod, prep_on, prep_before, prep_after);
         } else if (amod != -1) {
             found = rest5(tdl, amod);
@@ -508,24 +510,6 @@ public class NeuralNet {
         return found;
     }
 
-    static String rest2(List<TypedDependency> tdl, int ccomp) {
-        String temp = tdl.get(ccomp).toString();
-
-        return getFirst(temp) + " " + getSecond(temp);
-    }
-
-    static String rest3(List<TypedDependency> tdl, int acomp) {
-        String temp = tdl.get(acomp).toString();
-
-        return getFirst(temp) + " " + getSecond(temp);
-    }
-
-    static String rest4(List<TypedDependency> tdl, int partmod) {
-        String temp = tdl.get(partmod).toString();
-
-        return getFirst(temp) + " " + getSecond(temp);
-    }
-
     static String rest5(List<TypedDependency> tdl, int amod) {
         String temp = tdl.get(amod).toString();
 
@@ -538,6 +522,7 @@ public class NeuralNet {
         return getFirst(temp);
     }
 
+    //adds necessary prepositions to the phrase if necessary
     static String prepAdd(List<TypedDependency> tdl, int index, int p_on, int p_before, int p_after) {
         String addition = "";
         if (p_on != -1 && p_on > index) {
@@ -556,6 +541,7 @@ public class NeuralNet {
 
     //private ParserDemo() {} // static methods only
 
+    //helper method, gets the first element in the string
     static String getFirst(String temp) {
         StringTokenizer token = new StringTokenizer(temp, "(");
         token.nextToken();
@@ -565,6 +551,7 @@ public class NeuralNet {
         return token2.nextToken();
     }
 
+    //helper method, gets the second element in the string
     static String getSecond(String temp) {
         StringTokenizer token = new StringTokenizer(temp, "(");
         token.nextToken();
@@ -577,6 +564,35 @@ public class NeuralNet {
         return second.substring(1, second.length());
     }
 
+    //reads the input file and breaks it up into necessary elements
+    static ArrayList<String> readFile(String fileName) {
+        ArrayList<String> trainingData = new ArrayList<String>();
+        try {
+            File file = new File(fileName);
+            Scanner reader = new Scanner(file);
+            int i=-1;
+            while (reader.hasNext()) {
+                //System.out.println(++i);
+                trainingData.add(reader.nextLine()); //Sentence
+                trainingData.add(reader.nextLine()); //Pronoun
+                String temp = reader.nextLine();
+                StringTokenizer token = new StringTokenizer(temp, ",");
+                trainingData.add(token.nextToken()); //Noun1
+                temp = token.nextToken();
+                trainingData.add(temp.substring(1, temp.length())); //Noun2
+                trainingData.add(reader.nextLine()); //Correct Noun
+                reader.nextLine(); //blank
+            }
+        }
+        catch (Exception e) {
+            System.out.println("Error in reading file: " + e.getMessage());
+            System.exit(1);
+        }
+        
+        return trainingData;
+    }
+    
+    //Polls Google to get the number of results
     private static int getResultsCountGoogle(final String query) throws IOException {
         try {
             Thread.sleep(1000);
@@ -604,7 +620,8 @@ public class NeuralNet {
         reader.close();
         return 0;
     }
-
+    
+    //Polls Bing to get the number of results
     private static int getResultsCountBing(final String query) throws IOException {
         try {
             Thread.sleep(1000);
@@ -636,7 +653,48 @@ public class NeuralNet {
         reader.close();
         return 0;
     }
-
+    
+    //get correct answsers for comparing
+    boolean[] getCorrect(ArrayList<String> set) {
+        boolean[] correct = new boolean[set.size()/5];
+        
+        for (int i=0; i<set.size(); i+=10) {
+            String pNoun1 = set.get(i+2).toLowerCase();
+            String pNoun2 = set.get(i+3).toLowerCase();
+            String correct1 = set.get(i+4).toLowerCase();
+            String correct2 = set.get(i+9).toLowerCase();
+            if (pNoun1.equals(correct1)) {
+                correct[i/5] = true;
+                correct[(i/5)+1] = false;
+            }
+            else {
+                correct[i/5] = false;
+                correct[(i/5)+1] = true;
+            }
+        }
+        
+        return correct;
+        
+    }
+    
+    //combines the individual guesses and correct answers together
+    int[][] combine(boolean[] gMethodResults, boolean[] method2Results, boolean[] method3Results, boolean[] correctResults) {
+        int[][] combination = new int[4][correctResults.length];
+        
+        for (int i=0; i<combination[0].length; i++) {
+            for (int j=0; j<4; j++) { //seting everyting to 0
+                combination[j][i]=0;
+            }
+            if (gMethodResults[i]) combination[0][i]=1;
+            if (method2Results[i]) combination[1][i]=1;
+            if (method3Results[i]) combination[2][i]=1;
+            if (correctResults[i]) combination[3][i]=1;
+        }
+        
+        return combination;
+    }
+    
+    //Uses guesses from methods and the correct answers to create weights for the methods
     double[] trainWeights(int[][] trainingData, double[] weights, ArrayList<String> names, double learningRate, int iterations) {
         for (int i = 0; i < iterations; i++) {
             int index = i % trainingData.length; //If the number of iterations are larger then the training set
@@ -656,7 +714,8 @@ public class NeuralNet {
         }
         return weights;
     }
-
+    
+    //Takes guesses and correct answers and outputs correct/total using weights
     double testWeights(int[][] data, double[] weights) {
         double total = data.length;
         double correct = 0;
@@ -674,7 +733,8 @@ public class NeuralNet {
         }
         return (correct / total);
     }
-
+    
+    //Takes guesses and correct answers and outputs correct/total using a majority method
     double testMajority(int[][] data) {
         double total = data.length;
         double correct = 0;
@@ -696,32 +756,4 @@ public class NeuralNet {
         }
         return (correct / total);
     }
-
-    static ArrayList<String> readFile(String fileName) {
-        ArrayList<String> trainingData = new ArrayList<String>();
-        try {
-            File file = new File(fileName);
-            Scanner reader = new Scanner(file);
-            int i = -1;
-            while (reader.hasNext()) {
-                //System.out.println(++i);
-                trainingData.add(reader.nextLine()); //Sentence
-                trainingData.add(reader.nextLine()); //Pronoun
-                String temp = reader.nextLine();
-                StringTokenizer token = new StringTokenizer(temp, ",");
-                trainingData.add(token.nextToken()); //Noun1
-                temp = token.nextToken();
-                trainingData.add(temp.substring(1, temp.length())); //Noun2
-                trainingData.add(reader.nextLine()); //Correct Noun
-                reader.nextLine(); //blank
-            }
-        } catch (Exception e) {
-            System.out.println("Error in reading file: " + e.getMessage());
-            //System.exit(1);
-        }
-
-        return trainingData;
-    }
-
-
 }
