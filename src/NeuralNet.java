@@ -31,42 +31,84 @@ public class NeuralNet {
 
         //I am trying to change this file.
         ArrayList<String> input = readFile(args[0]);
-        CoNLP c = new CoNLP();
-        int l = 5;
 
-        for (int x = 0; x < input.size(); x += 5) {
-            writer.println(input.get(x));
-            c.testStanford(input.get(x), input.get(x + 4), input.get(x + 1), writer);
+        //boolean[] x = getSMethodResults(input);
+        boolean[] testResults = testWithStanford(input);
+
+        int count = 0;
+        for (int a = 0; a < testResults.length; a++) {
+            System.out.println(testResults[a]);
+            if (!testResults[a])
+                count++;
         }
 
+
+        System.out.println(count + " " + (testResults.length - count));
         writer.close();
     }
-    
+
+    static boolean[] testWithStanford(ArrayList<String> test) {
+        boolean[] sMethodResults = new boolean[test.size() / 10];
+        CoNLP c = new CoNLP();
+
+        for (int i = 0; i < test.size(); i += 10) {
+            String sentence1 = test.get(i);
+            String pronoun = test.get(i + 1);
+            String test1 = test.get(i + 2);
+            String test2 = test.get(i + 3);
+            String sentence2 = test.get(i + 5);
+
+            boolean result1 = c.testStanford(sentence1, test1, pronoun);
+            boolean result2 = c.testStanford(sentence2, test2, pronoun);
+
+            if (result1 && !result2)
+                sMethodResults[i / 10] = true;
+            else if (!result1 && result2)
+                sMethodResults[i / 10] = false;
+            else
+                sMethodResults[i / 10] = true;
+        }
+        return sMethodResults;
+    }
+
+    static boolean[] getSMethodResults(ArrayList<String> training) {
+        boolean[] sMethodResults = new boolean[training.size() / 5];
+        CoNLP c = new CoNLP();
+
+        for (int i = 0; i < training.size(); i += 5) {
+            String sentence = training.get(i);
+            String pronoun = training.get(i + 1);
+            String correctWord = training.get(i + 4);
+
+            sMethodResults[i / 5] = c.testStanford(sentence, correctWord, pronoun);
+        }
+        return sMethodResults;
+    }
+
     //returns a boolean array of the guesses gotten
     static boolean[] getGMethodResults(ArrayList<String> training) {
-        boolean[] gMethodResults = new boolean[training.size()/5];
+        boolean[] gMethodResults = new boolean[training.size() / 5];
 
-        for (int i=0; i<training.size(); i+=10) {
+        for (int i = 0; i < training.size(); i += 10) {
             String sent1 = training.get(i);
-            String sent2 = training.get(i+5);
-            String pNoun1 = training.get(i+2).toLowerCase();
-            String pNoun2 = training.get(i+3).toLowerCase();
-            String correct1 = training.get(i+4).toLowerCase();
-            String correct2 = training.get(i+9).toLowerCase();
+            String sent2 = training.get(i + 5);
+            String pNoun1 = training.get(i + 2).toLowerCase();
+            String pNoun2 = training.get(i + 3).toLowerCase();
+            String correct1 = training.get(i + 4).toLowerCase();
+            String correct2 = training.get(i + 9).toLowerCase();
             if (gMethod(sent1, sent2, pNoun1, pNoun2)) {
-                gMethodResults[i/5] = true;
-                gMethodResults[(i/5)+1] = false;
-            }
-            else {
-                gMethodResults[i/5] = false;
-                gMethodResults[(i/5)+1] = true;
+                gMethodResults[i / 5] = true;
+                gMethodResults[(i / 5) + 1] = false;
+            } else {
+                gMethodResults[i / 5] = false;
+                gMethodResults[(i / 5) + 1] = true;
             }
         }
 
         return gMethodResults;
     }
-    
-    //divide the training set into training and testing 
+
+    //divide the training set into training and testing
     //***Divide the length of readFile by 10 to get this length***
     static boolean[] trainAndTest(int length, double percentage) {
         boolean trainTest[] = new boolean[length];
@@ -241,7 +283,7 @@ public class NeuralNet {
     //returns the phrase for the cases with a mark
     static String markTest(List<TypedDependency> tdl) {
         String found;
-        int index=0;
+        int index = 0;
         int mark = -1;
         int det = -1;
         int cop = -1;
@@ -254,48 +296,48 @@ public class NeuralNet {
         int prep_on = -1;
         int prep_before = -1;
         int prep_after = -1;
-        
-        for(TypedDependency t : tdl) {
+
+        for (TypedDependency t : tdl) {
             String tD = t.toString();
             StringTokenizer token = new StringTokenizer(tD, "(");
             String id = token.nextToken();
             if (id.equals("mark")) {
-                mark=index;
+                mark = index;
             }
             if (mark != -1) {
                 if (id.equals("det")) {
                     if (det != -1) {
-                        if (index > mark && (index-mark) < (det-mark)) {
-                            det=index;
+                        if (index > mark && (index - mark) < (det - mark)) {
+                            det = index;
                         }
                         //****GET LOCATION OF PRONOUN AND USE THAT
-                    }
-                    else {
-                        det=index;
+                    } else {
+                        det = index;
                     }
                 } else if (id.equals("cop")) {
-                    cop=index;
+                    cop = index;
                 } else if (id.equals("dep")) {
-                    dep=index;
+                    dep = index;
                 } else if (id.equals("aux")) {
-                    aux=index;
+                    aux = index;
                 } else if (id.equals("auxpass")) {
-                    auxpass=index;
+                    auxpass = index;
                 } else if (id.equals("prep_in")) {
-                    prep_in=index;
+                    prep_in = index;
                 } else if (id.equals("dobj")) {
-                    dobj=index;
+                    dobj = index;
                 } else if (id.equals("nsubj")) {
-                    nsubj=index;
+                    nsubj = index;
                 } else if (id.equals("prep_on")) {
-                    prep_on=index;
+                    prep_on = index;
                 } else if (id.equals("prep_before")) {
-                    prep_before=index;
+                    prep_before = index;
                 } else if (id.equals("prep_after")) {
-                    prep_after=index;
+                    prep_after = index;
                 }
             }
-            index++;;
+            index++;
+            ;
         }
         if (mark == -1) {
             found = "nope";
@@ -311,7 +353,7 @@ public class NeuralNet {
         } else if (dep != -1 && aux != -1 && auxpass != -1) {
             found = mark5(tdl, dep, aux, auxpass);
             found += prepAdd(tdl, Math.max(Math.max(dep, aux), auxpass), prep_on, prep_before, prep_after);
-        } else if (prep_in != -1 ) {
+        } else if (prep_in != -1) {
             found = mark6(tdl, prep_in);
         } else if (dobj != -1) {
             found = mark7(tdl, dobj);
@@ -322,7 +364,7 @@ public class NeuralNet {
         } else {
             found = "huh: mark";
         }
-        
+
         return found;
     }
 
@@ -570,7 +612,7 @@ public class NeuralNet {
         try {
             File file = new File(fileName);
             Scanner reader = new Scanner(file);
-            int i=-1;
+            int i = -1;
             while (reader.hasNext()) {
                 //System.out.println(++i);
                 trainingData.add(reader.nextLine()); //Sentence
@@ -583,15 +625,14 @@ public class NeuralNet {
                 trainingData.add(reader.nextLine()); //Correct Noun
                 reader.nextLine(); //blank
             }
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             System.out.println("Error in reading file: " + e.getMessage());
-            System.exit(1);
+            //System.exit(1);
         }
-        
+
         return trainingData;
     }
-    
+
     //Polls Google to get the number of results
     private static int getResultsCountGoogle(final String query) throws IOException {
         try {
@@ -620,7 +661,7 @@ public class NeuralNet {
         reader.close();
         return 0;
     }
-    
+
     //Polls Bing to get the number of results
     private static int getResultsCountBing(final String query) throws IOException {
         try {
@@ -653,47 +694,46 @@ public class NeuralNet {
         reader.close();
         return 0;
     }
-    
+
     //get correct answsers for comparing
     boolean[] getCorrect(ArrayList<String> set) {
-        boolean[] correct = new boolean[set.size()/5];
-        
-        for (int i=0; i<set.size(); i+=10) {
-            String pNoun1 = set.get(i+2).toLowerCase();
-            String pNoun2 = set.get(i+3).toLowerCase();
-            String correct1 = set.get(i+4).toLowerCase();
-            String correct2 = set.get(i+9).toLowerCase();
+        boolean[] correct = new boolean[set.size() / 5];
+
+        for (int i = 0; i < set.size(); i += 10) {
+            String pNoun1 = set.get(i + 2).toLowerCase();
+            String pNoun2 = set.get(i + 3).toLowerCase();
+            String correct1 = set.get(i + 4).toLowerCase();
+            String correct2 = set.get(i + 9).toLowerCase();
             if (pNoun1.equals(correct1)) {
-                correct[i/5] = true;
-                correct[(i/5)+1] = false;
-            }
-            else {
-                correct[i/5] = false;
-                correct[(i/5)+1] = true;
+                correct[i / 5] = true;
+                correct[(i / 5) + 1] = false;
+            } else {
+                correct[i / 5] = false;
+                correct[(i / 5) + 1] = true;
             }
         }
-        
+
         return correct;
-        
+
     }
-    
+
     //combines the individual guesses and correct answers together
     int[][] combine(boolean[] gMethodResults, boolean[] method2Results, boolean[] method3Results, boolean[] correctResults) {
         int[][] combination = new int[4][correctResults.length];
-        
-        for (int i=0; i<combination[0].length; i++) {
-            for (int j=0; j<4; j++) { //seting everyting to 0
-                combination[j][i]=0;
+
+        for (int i = 0; i < combination[0].length; i++) {
+            for (int j = 0; j < 4; j++) { //seting everyting to 0
+                combination[j][i] = 0;
             }
-            if (gMethodResults[i]) combination[0][i]=1;
-            if (method2Results[i]) combination[1][i]=1;
-            if (method3Results[i]) combination[2][i]=1;
-            if (correctResults[i]) combination[3][i]=1;
+            if (gMethodResults[i]) combination[0][i] = 1;
+            if (method2Results[i]) combination[1][i] = 1;
+            if (method3Results[i]) combination[2][i] = 1;
+            if (correctResults[i]) combination[3][i] = 1;
         }
-        
+
         return combination;
     }
-    
+
     //Uses guesses from methods and the correct answers to create weights for the methods
     double[] trainWeights(int[][] trainingData, double[] weights, ArrayList<String> names, double learningRate, int iterations) {
         for (int i = 0; i < iterations; i++) {
@@ -714,7 +754,7 @@ public class NeuralNet {
         }
         return weights;
     }
-    
+
     //Takes guesses and correct answers and outputs correct/total using weights
     double testWeights(int[][] data, double[] weights) {
         double total = data.length;
@@ -733,7 +773,7 @@ public class NeuralNet {
         }
         return (correct / total);
     }
-    
+
     //Takes guesses and correct answers and outputs correct/total using a majority method
     double testMajority(int[][] data) {
         double total = data.length;

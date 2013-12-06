@@ -11,8 +11,6 @@ import edu.stanford.nlp.dcoref.CorefCoreAnnotations.CorefChainAnnotation;
 import edu.stanford.nlp.pipeline.Annotation;
 import edu.stanford.nlp.pipeline.StanfordCoreNLP;
 
-import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.Map;
 import java.util.Properties;
 
@@ -26,7 +24,7 @@ public class CoNLP {
 
     }
 
-    public boolean testStanford(String text, String correctWord, String pronoun, PrintWriter writer) throws IOException, ClassNotFoundException {
+    public boolean testStanford(String text, String correctWord, String pronoun) {
         Annotation document = new Annotation(text);
         pipeline.annotate(document);
 
@@ -42,10 +40,10 @@ public class CoNLP {
                 break;
             }
         }
-        if (contains)
-            writer.println("\t" + temp + " - " + contains);
-        else
-            writer.println("\t" + contains);
+//        if (contains)
+//            System.out.println("\t" + temp + " - " + contains);
+//        else
+//            System.out.println("\t" + contains);
         return contains;
     }
 }
