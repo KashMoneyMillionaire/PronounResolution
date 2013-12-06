@@ -45,6 +45,22 @@ public class NeuralNet {
 
         System.out.println(count + " " + (testResults.length - count));
         writer.close();
+        
+        //*** FOR GETTING WEIGHTS! Run if you can get it to work and let me know the weights
+ /*     String file = "train.txt";
+        ArrayList<String> testing = readFile(file);
+        
+        boolean[] trainbool = trainAndTest((testing.size()/10), 0.3);
+        ArrayList<String> trainSet = getSet(testing, trainbool, true);
+        boolean[] correct = getCorrect(trainSet);
+        boolean[] guessesG = getGMethodResults(trainSet);
+        boolean[] guessesS = getSMethodResults(trainSet);
+        
+        int[][] calculatingWeights = combine3(guessesG, guessesS, correct);
+        double[] weights = {0, 0};
+        weights = trainWeights(calculatingWeights, weights, 0.3, 1000);
+        System.out.println("W[0]: "+weights[0]+", W[1]"+weights[1]);
+        */
     }
 
     static boolean[] testWithStanford(ArrayList<String> test) {
@@ -84,31 +100,30 @@ public class NeuralNet {
         }
         return sMethodResults;
     }
-
+    
     //returns a boolean array of the guesses gotten
     static boolean[] getGMethodResults(ArrayList<String> training) {
-        boolean[] gMethodResults = new boolean[training.size() / 5];
-
-        for (int i = 0; i < training.size(); i += 10) {
+        boolean[] gMethodResults = new boolean[training.size()/5];
+        
+        for (int i=0; i<training.size(); i+=10) {
             String sent1 = training.get(i);
-            String sent2 = training.get(i + 5);
-            String pNoun1 = training.get(i + 2).toLowerCase();
-            String pNoun2 = training.get(i + 3).toLowerCase();
-            String correct1 = training.get(i + 4).toLowerCase();
-            String correct2 = training.get(i + 9).toLowerCase();
+            String sent2 = training.get(i+5);
+            String pNoun1 = training.get(i+2).toLowerCase();
+            String pNoun2 = training.get(i+3).toLowerCase();
             if (gMethod(sent1, sent2, pNoun1, pNoun2)) {
-                gMethodResults[i / 5] = true;
-                gMethodResults[(i / 5) + 1] = false;
-            } else {
-                gMethodResults[i / 5] = false;
-                gMethodResults[(i / 5) + 1] = true;
+                gMethodResults[i/5] = true;
+                gMethodResults[(i/5)+1] = false;
+            }
+            else {
+                gMethodResults[i/5] = false;
+                gMethodResults[(i/5)+1] = true;
             }
         }
 
         return gMethodResults;
     }
-
-    //divide the training set into training and testing
+    
+    //divide the training set into training (1-percentage) and testing (percentage)
     //***Divide the length of readFile by 10 to get this length***
     static boolean[] trainAndTest(int length, double percentage) {
         boolean trainTest[] = new boolean[length];
@@ -121,7 +136,7 @@ public class NeuralNet {
     //set train = true to get training set and false to get test set
     static ArrayList<String> getSet(ArrayList<String> data, boolean[] trainTest, boolean train) {
         ArrayList<String> set = new ArrayList<String>();
-        for (int i = 0; i < data.size(); i += 10) {
+        for (int i = 0; i < data.size()/10; i += 1) {
             if (train == trainTest[i]) {
                 for (int j = 0; j < 10; j++) {
                     set.add(data.get((i * 10) + j));
@@ -153,8 +168,8 @@ public class NeuralNet {
                 restTotal++;
             }
         }
+        
         boolean baseValues[] = { (nameCount >= (nameTotal - nameCount)), (restCount >= (restTotal - restCount)) };
-
         return baseValues;
     }
 
@@ -178,15 +193,11 @@ public class NeuralNet {
         return "didn't find";
     }
 
-
+    //The meat and potatoes
     public static boolean gMethod(String sent1, String sent2, String p1, String p2) {
         if (p1.equals("john") || p1.equals("bill") || p1.equals("mary") || p1.equals("sue") || p2.equals("john") || p2.equals("bill") || p2.equals("mary") || p2.equals("sue")) {
-            System.out.print("Name ");
             return true; //most likely
-        }/*
-      else {
-          return false;
-      }*/
+        }
 
         List<TypedDependency> tdl1 = getTDL(sent1);
         String phrase1 = getPhrase(tdl1);
@@ -201,7 +212,7 @@ public class NeuralNet {
 
         double resultp1PN1 = 1; //to stop rounding errors
         double resultp1PN2 = 1;
-        double percentage = 1; //amount larger search results must be
+        double percentage = 1.4; //amount larger search results must be
 
         if (phrase1.equals("didn't find")) {
             if (phrase2.equals("didn't find")) {
@@ -212,7 +223,7 @@ public class NeuralNet {
                     resultp1PN1 += getResultsCountBing(p2PN2);
                 } catch (Exception e) {
                     System.out.println("gMethod error1:" + e.getMessage());
-                    System.exit(1);
+                    return true;
                 }
 
                 if (resultp1PN2 > percentage * resultp1PN1) {
@@ -229,7 +240,7 @@ public class NeuralNet {
                     resultp1PN2 = getResultsCountBing(p1PN2);
                 } catch (Exception e) {
                     System.out.println("gMethod error2:" + e.getMessage());
-                    System.exit(1);
+                    return true;
                 }
 
                 if (resultp1PN1 > percentage * resultp1PN2) {
@@ -246,10 +257,8 @@ public class NeuralNet {
                     resultp1PN1 += getResultsCountBing(p2PN2);
                 } catch (Exception e) {
                     System.out.println("gMethod error3:" + e.getMessage());
-                    System.exit(1);
+                    return true;
                 }
-
-                System.out.println("resultp1PN1: " + resultp1PN1 + ", resultp1PN2:" + resultp1PN2);
 
                 if (resultp1PN1 > percentage * resultp1PN2) {
                     return true;
@@ -260,8 +269,7 @@ public class NeuralNet {
             }
         }
 
-        System.out.println("not enough to guess");
-        return false; //most likely of the rest (found from getBaseValues on training data)
+        return true; //most likely of the rest (found from getBaseValues on training data)
 
     }
 
@@ -283,7 +291,7 @@ public class NeuralNet {
     //returns the phrase for the cases with a mark
     static String markTest(List<TypedDependency> tdl) {
         String found;
-        int index = 0;
+        int index=0;
         int mark = -1;
         int det = -1;
         int cop = -1;
@@ -296,48 +304,48 @@ public class NeuralNet {
         int prep_on = -1;
         int prep_before = -1;
         int prep_after = -1;
-
-        for (TypedDependency t : tdl) {
+        
+        for(TypedDependency t : tdl) {
             String tD = t.toString();
             StringTokenizer token = new StringTokenizer(tD, "(");
             String id = token.nextToken();
             if (id.equals("mark")) {
-                mark = index;
+                mark=index;
             }
             if (mark != -1) {
                 if (id.equals("det")) {
                     if (det != -1) {
-                        if (index > mark && (index - mark) < (det - mark)) {
-                            det = index;
+                        if (index > mark && (index-mark) < (det-mark)) {
+                            det=index;
                         }
                         //****GET LOCATION OF PRONOUN AND USE THAT
-                    } else {
-                        det = index;
+                    }
+                    else {
+                        det=index;
                     }
                 } else if (id.equals("cop")) {
-                    cop = index;
+                    cop=index;
                 } else if (id.equals("dep")) {
-                    dep = index;
+                    dep=index;
                 } else if (id.equals("aux")) {
-                    aux = index;
+                    aux=index;
                 } else if (id.equals("auxpass")) {
-                    auxpass = index;
+                    auxpass=index;
                 } else if (id.equals("prep_in")) {
-                    prep_in = index;
+                    prep_in=index;
                 } else if (id.equals("dobj")) {
-                    dobj = index;
+                    dobj=index;
                 } else if (id.equals("nsubj")) {
-                    nsubj = index;
+                    nsubj=index;
                 } else if (id.equals("prep_on")) {
-                    prep_on = index;
+                    prep_on=index;
                 } else if (id.equals("prep_before")) {
-                    prep_before = index;
+                    prep_before=index;
                 } else if (id.equals("prep_after")) {
-                    prep_after = index;
+                    prep_after=index;
                 }
             }
-            index++;
-            ;
+            index++;;
         }
         if (mark == -1) {
             found = "nope";
@@ -353,7 +361,7 @@ public class NeuralNet {
         } else if (dep != -1 && aux != -1 && auxpass != -1) {
             found = mark5(tdl, dep, aux, auxpass);
             found += prepAdd(tdl, Math.max(Math.max(dep, aux), auxpass), prep_on, prep_before, prep_after);
-        } else if (prep_in != -1) {
+        } else if (prep_in != -1 ) {
             found = mark6(tdl, prep_in);
         } else if (dobj != -1) {
             found = mark7(tdl, dobj);
@@ -364,7 +372,7 @@ public class NeuralNet {
         } else {
             found = "huh: mark";
         }
-
+        
         return found;
     }
 
@@ -606,13 +614,13 @@ public class NeuralNet {
         return second.substring(1, second.length());
     }
 
-    //reads the input file and breaks it up into necessary elements
+    //reads the training file and breaks it up into necessary elements
     static ArrayList<String> readFile(String fileName) {
         ArrayList<String> trainingData = new ArrayList<String>();
         try {
             File file = new File(fileName);
             Scanner reader = new Scanner(file);
-            int i = -1;
+            int i=-1;
             while (reader.hasNext()) {
                 //System.out.println(++i);
                 trainingData.add(reader.nextLine()); //Sentence
@@ -621,22 +629,51 @@ public class NeuralNet {
                 StringTokenizer token = new StringTokenizer(temp, ",");
                 trainingData.add(token.nextToken()); //Noun1
                 temp = token.nextToken();
-                trainingData.add(temp.substring(1, temp.length())); //Noun2
+                trainingData.add(temp); //Noun2
                 trainingData.add(reader.nextLine()); //Correct Noun
                 reader.nextLine(); //blank
             }
-        } catch (Exception e) {
-            System.out.println("Error in reading file: " + e.getMessage());
-            //System.exit(1);
         }
-
+        catch (Exception e) {
+            System.out.println("Error in reading file: " + e.getMessage());
+            System.exit(1);
+        }
+        
         return trainingData;
     }
-
+    
+    //reads the testing file and breaks it up into necessary elements
+    static ArrayList<String> readTestFile(String fileName) {
+        ArrayList<String> testingData = new ArrayList<String>();
+        try {
+            File file = new File(fileName);
+            Scanner reader = new Scanner(file);
+            while (reader.hasNext()) {
+                testingData.add(reader.nextLine()); //Sentence
+                testingData.add(reader.nextLine()); //Pronoun
+                String temp = reader.nextLine();
+                StringTokenizer token = new StringTokenizer(temp, ",");
+                testingData.add(token.nextToken()); //Noun1
+                temp = token.nextToken();
+                testingData.add(temp); //Noun2
+                //System.out.println("after:"+testingData.get()
+                testingData.add("");
+                reader.nextLine(); //blank
+                reader.nextLine(); //blank
+            }
+        }
+        catch (Exception e) {
+            System.out.println("Error in reading file: " + e.getMessage());
+            System.exit(1);
+        }
+        
+        return testingData;
+    }
+    
     //Polls Google to get the number of results
     private static int getResultsCountGoogle(final String query) throws IOException {
         try {
-            Thread.sleep(1000);
+            Thread.sleep(2000);
         } catch (Exception e) {
 
         }
@@ -661,31 +698,25 @@ public class NeuralNet {
         reader.close();
         return 0;
     }
-
+    
     //Polls Bing to get the number of results
     private static int getResultsCountBing(final String query) throws IOException {
         try {
-            Thread.sleep(1000);
+            Thread.sleep(2000);
         } catch (Exception e) {
 
         }
         final URL url = new URL("http://www.bing.com/search?q=" + URLEncoder.encode(query, "UTF-8"));
-        //System.out.println("url: "+url);
         final URLConnection connection = url.openConnection();
-        //System.out.println("connection: "+connection.toString());
         connection.setConnectTimeout(60000);
         connection.setReadTimeout(60000);
         connection.addRequestProperty("User-Agent", "Mozilla/5.0");
         final Scanner reader = new Scanner(connection.getInputStream(), "UTF-8");
-        //System.out.println("location:"+connection.getHeaderField("location"));
         while (reader.hasNextLine()) {
             final String line = reader.nextLine();
-            //System.out.println("line: " + line);
             if (!line.contains("class=\"sb_count\""))
                 continue;
             try {
-                //System.out.println("line:"+line);
-                //System.out.println("line split: " + line.split("<span class=\"sb_count\" id=\"count\">")[1].split("<")[0].replaceAll("[^\\d]", ""));
                 return Integer.parseInt(line.split("<span class=\"sb_count\" id=\"count\">")[1].split("<")[0].replaceAll("[^\\d]", ""));
             } finally {
                 reader.close();
@@ -694,92 +725,93 @@ public class NeuralNet {
         reader.close();
         return 0;
     }
-
+    
     //get correct answsers for comparing
-    boolean[] getCorrect(ArrayList<String> set) {
-        boolean[] correct = new boolean[set.size() / 5];
-
-        for (int i = 0; i < set.size(); i += 10) {
-            String pNoun1 = set.get(i + 2).toLowerCase();
-            String pNoun2 = set.get(i + 3).toLowerCase();
-            String correct1 = set.get(i + 4).toLowerCase();
-            String correct2 = set.get(i + 9).toLowerCase();
+    static boolean[] getCorrect(ArrayList<String> set) {
+        boolean[] correct = new boolean[set.size()/5];
+        
+        for (int i=0; i<set.size(); i+=10) {
+            String pNoun1 = set.get(i+2).toLowerCase();
+            String pNoun2 = set.get(i+3).toLowerCase();
+            String correct1 = set.get(i+4).toLowerCase();
+            String correct2 = set.get(i+9).toLowerCase();
             if (pNoun1.equals(correct1)) {
-                correct[i / 5] = true;
-                correct[(i / 5) + 1] = false;
-            } else {
-                correct[i / 5] = false;
-                correct[(i / 5) + 1] = true;
+                correct[i/5] = true;
+                correct[(i/5)+1] = false;
+            }
+            else {
+                correct[i/5] = false;
+                correct[(i/5)+1] = true;
             }
         }
-
+        
         return correct;
-
+        
     }
-
+    
     //combines the individual guesses and correct answers together
-    int[][] combine(boolean[] gMethodResults, boolean[] method2Results, boolean[] method3Results, boolean[] correctResults) {
+    static int[][] combine(boolean[] gMethodResults, boolean[] method2Results, boolean[] method3Results, boolean[] correctResults) {
         int[][] combination = new int[4][correctResults.length];
-
-        for (int i = 0; i < combination[0].length; i++) {
-            for (int j = 0; j < 4; j++) { //seting everyting to 0
-                combination[j][i] = 0;
+        
+        for (int i=0; i<combination[0].length; i++) {
+            for (int j=0; j<4; j++) { //seting everyting to 0
+                combination[j][i]=0;
             }
-            if (gMethodResults[i]) combination[0][i] = 1;
-            if (method2Results[i]) combination[1][i] = 1;
-            if (method3Results[i]) combination[2][i] = 1;
-            if (correctResults[i]) combination[3][i] = 1;
+            if (gMethodResults[i]) combination[0][i]=1;
+            if (method2Results[i]) combination[1][i]=1;
+            if (method3Results[i]) combination[2][i]=1;
+            if (correctResults[i]) combination[3][i]=1;
         }
-
+        
         return combination;
     }
-
+    
     //Uses guesses from methods and the correct answers to create weights for the methods
-    double[] trainWeights(int[][] trainingData, double[] weights, ArrayList<String> names, double learningRate, int iterations) {
+    static double[] trainWeights(int[][] trainingData, double[] weights, double learningRate, int iterations) {
         for (int i = 0; i < iterations; i++) {
-            int index = i % trainingData.length; //If the number of iterations are larger then the training set
+            int index = i % trainingData[0].length; //If the number of iterations are larger then the training set
             double[] newWeights = new double[weights.length];
-            double correct = trainingData[index][trainingData[0].length - 1]; //correct value
+            double correct = trainingData[trainingData.length-1][index]; //correct value
             double dotProduct = 0;
             for (int j = 0; j < weights.length; j++) { //dot product of weights and data
-                dotProduct += weights[j] * trainingData[index][j];
+                dotProduct += weights[j] * trainingData[j][index];
             }
-            double predicted = 1 / (1 + (Math.pow(Math.E, -1 * dotProduct))); //predicted value
+            double predicted = 1/(1+(Math.pow(Math.E, -1 * dotProduct))); //predicted value
             double delta = correct - predicted;
             double dSigma = predicted * (1 - predicted);
             for (int k = 0; k < weights.length; k++) {
-                newWeights[k] = (weights[k] + (learningRate * delta * dSigma * trainingData[index][k]));
+                newWeights[k] = (weights[k] + (learningRate * delta * dSigma * trainingData[k][index]));
             }
             weights = newWeights;
         }
         return weights;
     }
-
+    
     //Takes guesses and correct answers and outputs correct/total using weights
-    double testWeights(int[][] data, double[] weights) {
-        double total = data.length;
+    static double testWeights(int[][] data, double[] weights) {
+        double total = data[0].length;
         double correct = 0;
-        int classIndex = (data[0].length - 1);
-        for (int i = 0; i < data.length; i++) {
+        int classIndex = (data.length - 1);
+        for (int i = 0; i < data[0].length; i++) {
             double dotProduct = 0;
             for (int j = 0; j < classIndex; j++) {
-                dotProduct += weights[j] * data[i][j];
+                dotProduct += weights[j] * data[j][i];
             }
-            double predictedDouble = 1 / (1 + (Math.pow(Math.E, -1 * dotProduct)));
-            int predicted = Math.round((int) predictedDouble);
-            if (predicted == data[i][classIndex]) {
+            double predictedDouble = Math.round((1/(1+(Math.pow(Math.E, -1 * dotProduct))))-0.01);
+            int predicted = (int) predictedDouble;
+            if (predicted == data[classIndex][i]) {
                 correct++;
             }
         }
         return (correct / total);
     }
-
+    
     //Takes guesses and correct answers and outputs correct/total using a majority method
-    double testMajority(int[][] data) {
-        double total = data.length;
+    static double testMajority(int[][] data) {
+        double total = data[0].length;
         double correct = 0;
-        int classIndex = (data[0].length - 1);
-        for (int i = 0; i < data.length; i++) {
+        int classIndex = (data.length - 1);
+        for (int i = 0; i < data[0].length; i++) {
             int temp = 0;
             int predicted = 0;
             for (int j = 0; j < classIndex; j++) {
@@ -787,7 +819,7 @@ public class NeuralNet {
                     temp++;
                 }
             }
-            if (temp > (classIndex - temp)) {
+            if (temp >= (classIndex - temp)) {
                 predicted = 1;
             }
             if (predicted == data[i][classIndex]) {
@@ -795,5 +827,159 @@ public class NeuralNet {
             }
         }
         return (correct / total);
+    }
+    
+    //Takes guesses and correct answers and outputs correct/total
+    static double testSingle(int[][] data) {
+        double total = data[0].length;
+        double correct = 0;
+        for (int i = 0; i < data[0].length; i++) {
+            //System.out.println("data[0]["+i+"]="+data[0][i]+", data[1]["+i+"]="+data[1][i]);
+            if (data[0][i] == data[1][i]) {
+                correct++;
+            }
+        }
+        return (correct / total);
+    }
+    
+    //reads training data and finds most probably outcome for sentence pairs with proper names and those without
+    static int[] getBaseValues2(ArrayList<String> training) {
+        int nameCount = 0;
+        int nameTotal = 0;
+        int restCount = 0;
+        int restTotal = 0;
+        for (int i = 0; i < training.size(); i += 10) {
+            String pNoun1 = training.get(i + 2).toLowerCase();
+            String pNoun2 = training.get(i + 3).toLowerCase();
+            String correct1 = training.get(i + 4).toLowerCase();
+            if (pNoun1.equals("john") || pNoun1.equals("bill") || pNoun1.equals("mary") || pNoun1.equals("sue") || pNoun2.equals("john") || pNoun2.equals("bill") || pNoun2.equals("mary") || pNoun2.equals("sue")) {
+                if (pNoun1.equals(correct1)) {
+                    nameCount++;
+                }
+                nameTotal++;
+            } else {
+                if (pNoun1.equals(correct1)) {
+                    restCount++;
+                }
+                restTotal++;
+            }
+        }
+        double name = ((double)nameCount/(double)nameTotal);
+        double rest = ((double)restCount/(double)restTotal);
+        if (name < 0.5) {
+            //System.out.println("Named: " + name + ", Rest: " + rest);
+        }
+        
+        if ((nameTotal-restTotal)< 0) {
+            //System.out.println("Named-Rest: " + (nameTotal-restTotal));
+        }
+        
+        int baseValues[] = { nameCount, nameTotal, restCount, restTotal };
+
+        return baseValues;
+    }
+    
+    //Used for single method
+    static int[][] combine2(boolean[] gMethodResults, boolean[] correctResults) {
+        int[][] combination = new int[2][gMethodResults.length];
+        
+        for (int i=0; i<combination[0].length; i++) {
+            for (int j=0; j<2; j++) { //seting everyting to 0
+                combination[j][i]=0;
+            }
+            if (gMethodResults[i]) combination[0][i]=1;
+            if (correctResults[i]) combination[1][i]=1;
+            //System.out.println("i: "+i+", guess: "+gMethodResults[i]+", correct: "+correctResults[i]);
+        }
+        
+        return combination;
+    }
+    
+    //combines the individual guesses and correct answers together
+    static int[][] combine3(boolean[] gMethodResults, boolean[] sMethodResults, boolean[] correctResults) {
+        int[][] combination = new int[3][correctResults.length];
+        
+        for (int i=0; i<combination[0].length; i++) {
+            for (int j=0; j<3; j++) { //seting everyting to 0
+                combination[j][i]=0;
+            }
+            if (gMethodResults[i]) combination[0][i]=1;
+            if (sMethodResults[i]) combination[1][i]=1;
+            if (correctResults[i]) combination[2][i]=1;
+        }
+        
+        return combination;
+    }
+    
+    static void writePrediction(ArrayList<String> testing, boolean[] predictions) {
+        try {
+            File file = new File("predictions2.out");
+            PrintWriter writer = new PrintWriter(file);
+            for (int i=0; i<testing.size(); i++) {
+                if ((i%5) < 2) {
+                    writer.println(testing.get(i));
+                }
+                else if ((i%5) == 2) {
+                    writer.println(testing.get(i)+","+testing.get(i+1));
+                }
+                else if ((i%5) == 3) {
+                    if (predictions[i/5]) {
+                        writer.println(testing.get(i-1));
+                    }
+                    else {
+                        writer.println(testing.get(i));
+                    }
+                }
+                else {
+                    writer.println();
+                }
+            }
+            writer.close();
+        }
+        catch (Exception e) {
+            System.out.println("Error in writing file: " + e.getMessage());
+            System.out.println("Error in writing file: " + e.toString());
+            System.exit(1);
+        }
+    }
+    
+    static boolean[] useWeights(int[][] data, double[] weights) {
+        boolean[] finalGuess = new boolean[data[0].length];
+        for (int i = 0; i < data[0].length; i++) {
+            double dotProduct = 0;
+            for (int j = 0; j < data.length; j++) {
+                dotProduct += weights[j] * data[j][i];
+            }
+            double predictedDouble = Math.round(1/(1+(Math.pow(Math.E, -1 * dotProduct))));
+            int predicted = (int) predictedDouble;
+            if (predicted == 1) {
+                finalGuess[i]=true;
+            }
+            else {
+                finalGuess[i]=false;
+            }
+        }
+        return finalGuess;
+    }
+    
+    //Takes guesses and correct answers and outputs correct/total using a majority method
+    static boolean[] useMajority(int[][] data) {
+        boolean[] finalGuess = new boolean[data[0].length];
+        for (int i = 0; i < data[0].length; i++) {
+            int temp = 0;
+            int predicted = 0;
+            for (int j = 0; j < data.length; j++) {
+                if (data[i][j] == 1) {
+                    temp++;
+                }
+            }
+            if (temp >= (data.length - temp)) {
+                finalGuess[i]=true;
+            }
+            else {
+                finalGuess[i]=false;
+            }
+        }
+        return finalGuess;
     }
 }
