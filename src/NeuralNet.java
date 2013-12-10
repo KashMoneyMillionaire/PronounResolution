@@ -33,6 +33,7 @@ public class NeuralNet {
         double[] weights = { -0.41570633878126223, 1.3238989741017408 }; // getWeights();
         //getWeights();
         testStuff(weights, args);
+        //need to commit
 
     }
 
