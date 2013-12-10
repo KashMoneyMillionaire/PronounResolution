@@ -5,10 +5,7 @@ import edu.stanford.nlp.process.PTBTokenizer;
 import edu.stanford.nlp.process.TokenizerFactory;
 import edu.stanford.nlp.trees.*;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringReader;
+import java.io.*;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
@@ -25,42 +22,91 @@ import java.util.StringTokenizer;
  * To change this template use File | Settings | File Templates.
  */
 public class NeuralNet {
+
+
+    static LexicalizedParser lp = LexicalizedParser.loadModel("edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz");
+    static TokenizerFactory<CoreLabel> tokenizerFactory = PTBTokenizer.factory(new CoreLabelTokenFactory(), "");
+    static int count = 0;
+
     public static void main(String[] args) throws Exception {
-        System.out.print(args[0]);
-        PrintWriter writer = new PrintWriter("Output.txt", "UTF-8");
 
-        //I am trying to change this file.
-        ArrayList<String> input = readFile(args[0]);
+        double[] weights = { -0.41570633878126223, 1.3238989741017408 }; // getWeights();
+        //getWeights();
+        testStuff(weights, args);
 
-        //boolean[] x = getSMethodResults(input);
-        boolean[] testResults = testWithStanford(input);
+    }
 
-        int count = 0;
-        for (int a = 0; a < testResults.length; a++) {
-            System.out.println(testResults[a]);
-            if (!testResults[a])
-                count++;
-        }
-
-
-        System.out.println(count + " " + (testResults.length - count));
-        writer.close();
-        
+    private static double[] getWeights() throws Exception {
         //*** FOR GETTING WEIGHTS! Run if you can get it to work and let me know the weights
- /*     String file = "train.txt";
+        String file = "bigTrain.txt";
         ArrayList<String> testing = readFile(file);
-        
+
         boolean[] trainbool = trainAndTest((testing.size()/10), 0.3);
         ArrayList<String> trainSet = getSet(testing, trainbool, true);
         boolean[] correct = getCorrect(trainSet);
-        boolean[] guessesG = getGMethodResults(trainSet);
+
+        boolean[] guessesG = findTheRightArray(file, trainSet, "guessesG");
         boolean[] guessesS = getSMethodResults(trainSet);
-        
+
         int[][] calculatingWeights = combine3(guessesG, guessesS, correct);
         double[] weights = {0, 0};
         weights = trainWeights(calculatingWeights, weights, 0.3, 1000);
-        System.out.println("W[0]: "+weights[0]+", W[1]"+weights[1]);
-        */
+        System.out.println("W[0]: " + weights[0] + ", W[1]: " + weights[1]);
+        return weights;
+    }
+
+    private static void testStuff(double[] incoming, String[] args) throws Exception {
+        String file = args[0];
+        ArrayList<String> testing = readTestFile(file);
+        boolean[] guessesS = getSMethodResults(testing);
+        boolean[] guessesG = getGMethodResults(testing); //findTheRightArray(file, testing, "guessesG");
+
+        int[][] combination = combine2(guessesG, guessesS);
+        double[] weights = incoming;
+        boolean[] prediction = useWeights(combination, weights);
+        writePrediction(testing, prediction);
+    }
+
+    private static boolean[] findTheRightArray(String file, ArrayList<String> trainSet, String guesses) throws Exception {
+
+        boolean[] guessesG;
+        File f = new File(file + guesses + ".dat");
+        if (f.exists()) {
+            System.out.println(file + guesses + ".dat exists and will be read from.");
+            guessesG = new boolean[trainSet.size() / 5];
+            FileInputStream in = new FileInputStream(file + guesses + ".dat");
+            readBooleans(in, guessesG);
+            in.close();
+        } else {
+            System.out.println(file + guesses + ".dat does not exist. Creating array from getGMethodResults().");
+            guessesG = getGMethodResults(trainSet);
+            FileOutputStream out = new FileOutputStream(file + guesses + ".dat");
+            writeBooleans(out, guessesG);
+            out.close();
+        }
+        return guessesG;
+    }
+
+    private static void writeBooleans(OutputStream out, boolean[] ar) throws IOException {
+        for (int i = 0; i < ar.length; i += 8) {
+            int b = 0;
+            for (int j = Math.min(i + 7, ar.length - 1); j >= i; j--) {
+                b = (b << 1) | (ar[j] ? 1 : 0);
+            }
+            out.write(b);
+        }
+    }
+
+    private static void readBooleans(InputStream in, boolean[] ar) throws IOException {
+        for (int i = 0; i < ar.length; i += 8) {
+            int b = in.read();
+            if (b < 0) return;
+            for (int j = i; j < i + 8 && j < ar.length; j++) {
+                ar[j] = (b & 1) != 0;
+                b >>>= 1;
+            }
+        }
+        System.out.println("It worked");
     }
 
     static boolean[] testWithStanford(ArrayList<String> test) {
@@ -104,8 +150,8 @@ public class NeuralNet {
     //returns a boolean array of the guesses gotten
     static boolean[] getGMethodResults(ArrayList<String> training) {
         boolean[] gMethodResults = new boolean[training.size()/5];
-        
-        for (int i=0; i<training.size(); i+=10) {
+        int size = training.size();
+        for (int i = 0; i < size; i += 10) {
             String sent1 = training.get(i);
             String sent2 = training.get(i+5);
             String pNoun1 = training.get(i+2).toLowerCase();
@@ -136,7 +182,8 @@ public class NeuralNet {
     //set train = true to get training set and false to get test set
     static ArrayList<String> getSet(ArrayList<String> data, boolean[] trainTest, boolean train) {
         ArrayList<String> set = new ArrayList<String>();
-        for (int i = 0; i < data.size()/10; i += 1) {
+        int size = data.size() / 10;
+        for (int i = 0; i < size; i += 1) {
             if (train == trainTest[i]) {
                 for (int j = 0; j < 10; j++) {
                     set.add(data.get((i * 10) + j));
@@ -275,8 +322,6 @@ public class NeuralNet {
 
     //Uses the parser to return the Typed Dependency List
     public static List<TypedDependency> getTDL(String sentence) {
-        LexicalizedParser lp = LexicalizedParser.loadModel("edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz");
-        TokenizerFactory<CoreLabel> tokenizerFactory = PTBTokenizer.factory(new CoreLabelTokenFactory(), "");
         List<CoreLabel> rawWords2 = tokenizerFactory.getTokenizer(new StringReader(sentence)).tokenize();
         Tree parse = lp.apply(rawWords2);
 
@@ -636,7 +681,7 @@ public class NeuralNet {
         }
         catch (Exception e) {
             System.out.println("Error in reading file: " + e.getMessage());
-            System.exit(1);
+            //System.exit(1);
         }
         
         return trainingData;
@@ -664,7 +709,7 @@ public class NeuralNet {
         }
         catch (Exception e) {
             System.out.println("Error in reading file: " + e.getMessage());
-            System.exit(1);
+            //System.exit(1);
         }
         
         return testingData;
@@ -702,7 +747,7 @@ public class NeuralNet {
     //Polls Bing to get the number of results
     private static int getResultsCountBing(final String query) throws IOException {
         try {
-            Thread.sleep(2000);
+            Thread.sleep(6000);
         } catch (Exception e) {
 
         }
@@ -720,6 +765,7 @@ public class NeuralNet {
                 return Integer.parseInt(line.split("<span class=\"sb_count\" id=\"count\">")[1].split("<")[0].replaceAll("[^\\d]", ""));
             } finally {
                 reader.close();
+                System.out.print(count++ + " " + (count % 30 == 0 ? "\n" : ""));
             }
         }
         reader.close();
@@ -913,7 +959,7 @@ public class NeuralNet {
     
     static void writePrediction(ArrayList<String> testing, boolean[] predictions) {
         try {
-            File file = new File("predictions2.out");
+            File file = new File("predictions.out");
             PrintWriter writer = new PrintWriter(file);
             for (int i=0; i<testing.size(); i++) {
                 if ((i%5) < 2) {
@@ -921,8 +967,7 @@ public class NeuralNet {
                 }
                 else if ((i%5) == 2) {
                     writer.println(testing.get(i)+","+testing.get(i+1));
-                }
-                else if ((i%5) == 3) {
+                } else if ((i % 5) == 3) {
                     if (predictions[i/5]) {
                         writer.println(testing.get(i-1));
                     }
