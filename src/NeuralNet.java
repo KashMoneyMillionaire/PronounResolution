@@ -30,9 +30,9 @@ public class NeuralNet {
 
     public static void main(String[] args) throws Exception {
 
-        double[] weights = { -0.41570633878126223, 1.3238989741017408 }; // getWeights();
+        double[] weights = { -0.19120428157367558, 1.6597957057508668 }; // getWeights();
         //getWeights();
-        testStuff(weights, args);
+        threeOutputTest(weights, args);
         //need to commit
 
     }
@@ -51,7 +51,7 @@ public class NeuralNet {
 
         int[][] calculatingWeights = combine3(guessesG, guessesS, correct);
         double[] weights = {0, 0};
-        weights = trainWeights(calculatingWeights, weights, 0.3, 1000);
+        weights = trainWeights(calculatingWeights, weights, 0.3, 10000);
         System.out.println("W[0]: " + weights[0] + ", W[1]: " + weights[1]);
         return weights;
     }
@@ -65,7 +65,46 @@ public class NeuralNet {
         int[][] combination = combine2(guessesG, guessesS);
         double[] weights = incoming;
         boolean[] prediction = useWeights(combination, weights);
-        writePrediction(testing, prediction);
+        writePrediction(testing, prediction, 1);
+    }
+    
+    private static void threeOutputTest(double[] incoming, String[] args) throws Exception {
+  /*      //String file = args[0];
+        String file = "bigTrain.txt";
+        ArrayList<String> testing = readTestFile(file);
+        boolean[] guessesS = getSMethodResults(testing);
+        boolean[] guessesG = getGMethodResults(testing); //findTheRightArray(file, testing, "guessesG");
+
+        int[][] combination = combine2(guessesG, guessesS);
+        double[] weights = incoming;
+        boolean[] prediction = useWeights(combination, weights);
+        writePrediction(testing, prediction);*/
+        
+        String file = "bigTrain.txt";
+        ArrayList<String> testing = readFile(file);
+
+        boolean[] correct = getCorrect(testing);
+        boolean[] guessesS = getSMethodResults(testing);
+        boolean[] guessesG = getGMethodResults(testing);
+
+        int[][] combinationGC = combine2(guessesG, correct);
+        double tempPercentG = testSingle(combinationGC);
+        System.out.println("GMethod accuracy:"+tempPercentG);
+        writePrediction(testing, guessesG, 2);
+
+        int[][] combinationSC = combine2(guessesS, correct);
+        double tempPercentS = testSingle(combinationSC);
+        System.out.println("SMethod accuracy:"+tempPercentS);
+        writePrediction(testing, guessesS, 3);
+
+        int[][] trainingWeights = combine3(guessesG, guessesS, correct);
+        double[] weights = {0, 0};
+        weights = trainWeights(trainingWeights, weights, 0.3, 10000);
+        System.out.println("W[0]: "+weights[0]+", W[1]"+weights[1]);
+       
+        int[][] combination = combine2(guessesG, guessesS);
+        boolean[] prediction = useWeights(combination, incoming);
+        writePrediction(testing, prediction, 1);
     }
 
     private static boolean[] findTheRightArray(String file, ArrayList<String> trainSet, String guesses) throws Exception {
@@ -748,7 +787,7 @@ public class NeuralNet {
     //Polls Bing to get the number of results
     private static int getResultsCountBing(final String query) throws IOException {
         try {
-            Thread.sleep(6000);
+            //Thread.sleep(6000);
         } catch (Exception e) {
 
         }
@@ -958,9 +997,10 @@ public class NeuralNet {
         return combination;
     }
     
-    static void writePrediction(ArrayList<String> testing, boolean[] predictions) {
+    static void writePrediction(ArrayList<String> testing, boolean[] predictions, int post) {
         try {
-            File file = new File("predictions.out");
+            String fileName = "predictions" + post + ".out";
+            File file = new File(fileName);
             PrintWriter writer = new PrintWriter(file);
             for (int i=0; i<testing.size(); i++) {
                 if ((i%5) < 2) {
@@ -996,7 +1036,7 @@ public class NeuralNet {
             for (int j = 0; j < data.length; j++) {
                 dotProduct += weights[j] * data[j][i];
             }
-            double predictedDouble = Math.round(1/(1+(Math.pow(Math.E, -1 * dotProduct))));
+            double predictedDouble = Math.round((1/(1+(Math.pow(Math.E, -1 * dotProduct))))-0.01);
             int predicted = (int) predictedDouble;
             if (predicted == 1) {
                 finalGuess[i]=true;
