@@ -160,15 +160,15 @@ public class NeuralNet {
             String test2 = test.get(i + 3);
             String sentence2 = test.get(i + 5);
 
-            boolean result1 = c.testStanford(sentence1, test1, pronoun);
-            boolean result2 = c.testStanford(sentence2, test2, pronoun);
-
-            if (result1 && !result2)
-                sMethodResults[i / 10] = true;
-            else if (!result1 && result2)
-                sMethodResults[i / 10] = false;
-            else
-                sMethodResults[i / 10] = true;
+//            boolean result1 = c.testStanford(sentence1, test1, pronoun);
+//            boolean result2 = c.testStanford(sentence2, test2, pronoun);
+//
+//            if (result1 && !result2)
+//                sMethodResults[i / 10] = true;
+//            else if (!result1 && result2)
+//                sMethodResults[i / 10] = false;
+//            else
+//                sMethodResults[i / 10] = true;
         }
         return sMethodResults;
     }
@@ -180,9 +180,9 @@ public class NeuralNet {
         for (int i = 0; i < training.size(); i += 5) {
             String sentence = training.get(i);
             String pronoun = training.get(i + 1);
-            String correctWord = training.get(i + 4);
+            String word1 = training.get(i + 2), word2 = training.get(i + 3);
 
-            sMethodResults[i / 5] = c.testStanford(sentence, correctWord, pronoun);
+            sMethodResults[i / 5] = c.testStanford(sentence, word1, word2, pronoun);
         }
         return sMethodResults;
     }

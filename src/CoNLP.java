@@ -24,26 +24,21 @@ public class CoNLP {
 
     }
 
-    public boolean testStanford(String text, String correctWord, String pronoun) {
+    public boolean testStanford(String text, String word1, String word2, String pronoun) {
         Annotation document = new Annotation(text);
         pipeline.annotate(document);
+        boolean[] sResults = { true, false };
 
         Map<Integer, CorefChain> graph = document.get(CorefChainAnnotation.class);
 
-        boolean contains = false;
-        String temp = "";
+        String temp;
         for (Map.Entry<Integer, CorefChain> entry : graph.entrySet()) {
 
             temp = entry.getValue().toString();
-            if (temp.contains("\"" + correctWord + "\"") && temp.contains("\"" + pronoun + "\"")) {
-                contains = true;
-                break;
+            if (temp.contains("\"" + pronoun + "\"") && temp.contains("\"" + word1 + "\"")) {
+                return true;
             }
         }
-//        if (contains)
-//            System.out.println("\t" + temp + " - " + contains);
-//        else
-//            System.out.println("\t" + contains);
-        return contains;
+        return false;
     }
 }
