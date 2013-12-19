@@ -29,12 +29,32 @@ public class NeuralNet {
     static int count = 0;
 
     public static void main(String[] args) throws Exception {
+        double[] weights = {0.96730349, -0.28849325}; // getWeights();
+        
+        threeOutput(weights, args);
 
-        double[] weights = { -0.19120428157367558, 1.6597957057508668 }; // getWeights();
-        //getWeights();
-        threeOutputTest(weights, args);
-        //need to commit
+    }
+    
+    private static void threeOutput(double[] incoming, String[] args) throws Exception {
+        String file = args[0];
+        ArrayList<String> testing = readTestFile(file);
 
+        boolean[] guessesS = getSMethodResults(testing);
+        boolean[] guessesG = getGMethodResults(testing);
+        
+        //using orginal weights
+        double[] weights = { -0.19120428157367558, 1.6597957057508668 };
+        int[][] combination = combine2(guessesG, guessesS);
+        boolean[] prediction = useWeights(combination, weights);
+        writePrediction(testing, prediction, 1);
+        
+        //new weights
+        boolean[] prediction2 = useWeights(combination, incoming);
+        writePrediction(testing, prediction2, 2);
+        
+        //new weights and reversed (just in case)
+        boolean[] prediction3 = reverse(prediction2);
+        writePrediction(testing, prediction3, 3);
     }
 
     private static double[] getWeights() throws Exception {
