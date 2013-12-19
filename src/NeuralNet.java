@@ -56,6 +56,16 @@ public class NeuralNet {
         boolean[] prediction3 = reverse(prediction2);
         writePrediction(testing, prediction3, 3);
     }
+    
+    static boolean[] reverse(boolean[] prediction) {
+        boolean[] opposite = new boolean[prediction.length];
+        
+        for (int i=0; i<prediction.length; i++){
+            opposite[i] = !prediction[i];
+        }
+        
+        return opposite;
+    }
 
     private static double[] getWeights() throws Exception {
         //*** FOR GETTING WEIGHTS! Run if you can get it to work and let me know the weights
